@@ -78,8 +78,9 @@ class BugHoundAgent:
 
         issues = self._parse_json_array_of_issues(raw)
 
-        if issues is None:
-            self._log("ANALYZE", "LLM output was not parseable JSON. Falling back to heuristics.")
+        if not issues:
+            reason = "not parseable JSON" if issues is None else "empty after validation"
+            self._log("ANALYZE", f"LLM output was {reason}. Falling back to heuristics.")
             return self._heuristic_analyze(code_snippet)
 
         return issues
@@ -190,11 +191,14 @@ class BugHoundAgent:
         for item in arr:
             if not isinstance(item, dict):
                 continue
+            msg = str(item.get("msg", "")).strip()
+            if not msg:
+                continue
             issues.append(
                 {
                     "type": str(item.get("type", "Issue")),
                     "severity": str(item.get("severity", "Unknown")),
-                    "msg": str(item.get("msg", "")).strip(),
+                    "msg": msg,
                 }
             )
         return issues

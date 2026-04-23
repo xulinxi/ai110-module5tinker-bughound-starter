@@ -46,3 +46,29 @@ def test_missing_return_is_penalized():
     )
     assert risk["score"] < 100
     assert any("Return" in r or "return" in r for r in risk["reasons"])
+
+
+def test_medium_severity_alone_blocks_autofix():
+    original = "def f():\n    return 1\n"
+    fixed = "def f():\n    return 1  # tweaked\n"
+    risk = assess_risk(
+        original_code=original,
+        fixed_code=fixed,
+        issues=[{"type": "Reliability", "severity": "Medium", "msg": "needs review"}],
+    )
+    assert risk["level"] == "low"
+    assert risk["should_autofix"] is False
+
+
+def test_invalid_fixed_code_syntax_forces_high_risk():
+    original = "def f():\n    return 1\n"
+    fixed = "def f(:\n    return 1\n"
+    risk = assess_risk(
+        original_code=original,
+        fixed_code=fixed,
+        issues=[{"type": "Code Quality", "severity": "Low", "msg": "tweak"}],
+    )
+    assert risk["level"] == "high"
+    assert risk["should_autofix"] is False
+    assert risk["score"] == 0
+    assert any("not valid Python" in r for r in risk["reasons"])
